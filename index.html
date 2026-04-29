@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenCircuitLab — Interactive Synthetic Biology & Genetic Circuit Design Laboratory</title>
+<meta name="description" content="Design, simulate, and analyze genetic circuits: toggle switches, repressilators, CRISPR logic gates, stochastic gene expression, and metabolic flux analysis. Zero dependencies.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0e17;--surface:#111827;--surface2:#1a2332;--border:#2a3a50;
+--text:#e2e8f0;--text2:#94a3b8;--accent:#10b981;--accent2:#06d6a0;
+--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;--orange:#f59e0b;
+--yellow:#eab308;--pink:#ec4899;--cyan:#06b6d4;
+--gene-a:#10b981;--gene-b:#3b82f6;--gene-c:#f59e0b;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:12px}
+.logo svg{width:40px;height:40px}
+.logo h1{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo span{font-size:.75rem;color:var(--text2);display:block;margin-top:2px}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav button{background:transparent;border:1px solid transparent;color:var(--text2);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .2s;white-space:nowrap}
+nav button:hover{color:var(--text);background:var(--surface)}
+nav button.active{background:var(--surface);color:var(--accent);border-color:var(--accent)}
+.module{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.module.active{display:block}
+.module-header{margin-bottom:24px}
+.module-header h2{font-size:1.5rem;font-weight:700;margin-bottom:6px}
+.module-header p{color:var(--text2);font-size:.9rem;line-height:1.5}
+.module-header .ref{font-size:.75rem;color:var(--text2);margin-top:4px;font-style:italic}
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative}
+.card h3{font-size:1rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+canvas{width:100%;border-radius:8px;background:var(--bg)}
+.controls{display:flex;flex-direction:column;gap:12px}
+.control-group{display:flex;flex-direction:column;gap:4px}
+.control-group label{font-size:.75rem;color:var(--text2);font-weight:500;display:flex;justify-content:space-between}
+.control-group label span{color:var(--accent);font-weight:600}
+input[type="range"]{width:100%;accent-color:var(--accent);height:6px;-webkit-appearance:none;background:var(--border);border-radius:3px;outline:none}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+button.btn{background:var(--accent);color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+button.btn:hover{opacity:.9;transform:translateY(-1px)}
+button.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+button.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+button.btn-red{background:var(--red)}
+button.btn-blue{background:var(--blue)}
+button.btn-purple{background:var(--purple)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.stat-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.stat{background:var(--bg);padding:8px 12px;border-radius:8px;flex:1;min-width:100px}
+.stat .label{font-size:.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.stat .value{font-size:1.1rem;font-weight:700;margin-top:2px}
+select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:.8rem;width:100%}
+.truth-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:12px}
+.truth-table th,.truth-table td{padding:6px 10px;border:1px solid var(--border);text-align:center}
+.truth-table th{background:var(--surface2);color:var(--accent);font-weight:600}
+.truth-table td.on{color:var(--accent);font-weight:700}
+.truth-table td.off{color:var(--red)}
+.network-canvas{width:100%;min-height:400px;border-radius:8px;background:var(--bg);border:1px solid var(--border);position:relative;cursor:crosshair}
+.tooltip{position:absolute;background:var(--surface2);border:1px solid var(--border);padding:8px 12px;border-radius:6px;font-size:.75rem;pointer-events:none;z-index:50;max-width:200px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.75rem}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-color{width:12px;height:12px;border-radius:3px}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px}
+.tab-bar button{background:var(--bg);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:500;transition:all .2s}
+.tab-bar button.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.equations{background:var(--bg);padding:12px 16px;border-radius:8px;font-family:'Courier New',monospace;font-size:.8rem;line-height:1.8;color:var(--cyan);margin:12px 0;overflow-x:auto;white-space:pre}
+.node-palette{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.node-palette .node-type{background:var(--bg);border:1px solid var(--border);padding:6px 12px;border-radius:6px;cursor:grab;font-size:.75rem;font-weight:500;transition:all .2s;user-select:none}
+.node-palette .node-type:hover{border-color:var(--accent);color:var(--accent)}
+.node-palette .node-type.selected{border-color:var(--accent);background:rgba(16,185,129,.1);color:var(--accent)}
+.info-box{background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:12px 16px;font-size:.8rem;line-height:1.6;margin:12px 0}
+@media(max-width:900px){
+.grid-2,.grid-3{grid-template-columns:1fr}
+nav{gap:2px}
+nav button{padding:6px 10px;font-size:.7rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo">
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="20" cy="20" r="18" stroke="url(#lg)" stroke-width="2" fill="none"/>
+<path d="M12 14 C12 14 14 20 20 20 C26 20 28 14 28 14" stroke="#10b981" stroke-width="2" fill="none"/>
+<path d="M12 26 C12 26 14 20 20 20 C26 20 28 26 28 26" stroke="#3b82f6" stroke-width="2" fill="none"/>
+<circle cx="12" cy="14" r="2.5" fill="#10b981"/>
+<circle cx="28" cy="14" r="2.5" fill="#10b981"/>
+<circle cx="12" cy="26" r="2.5" fill="#3b82f6"/>
+<circle cx="28" cy="26" r="2.5" fill="#3b82f6"/>
+<circle cx="20" cy="20" r="3" fill="#f59e0b"/>
+<defs><linearGradient id="lg" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#10b981"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+</svg>
+<div>
+<h1>GenCircuitLab</h1>
+<span>Interactive Synthetic Biology & Genetic Circuit Design</span>
+</div>
+</div>
+<nav id="nav">
+<button class="active" onclick="switchModule(0)">Toggle Switch</button>
+<button onclick="switchModule(1)">Repressilator</button>
+<button onclick="switchModule(2)">CRISPR Gates</button>
+<button onclick="switchModule(3)">GRN Builder</button>
+<button onclick="switchModule(4)">Stochastic Sim</button>
+<button onclick="switchModule(5)">Flux Analysis</button>
+</nav>
+</header>
+
+<!-- MODULE 0: GENETIC TOGGLE SWITCH -->
+<div class="module active" id="mod0">
+<div class="module-header">
+<h2>Genetic Toggle Switch</h2>
+<p>The first synthetic bistable gene network — two mutually repressing promoters creating a biological memory element.</p>
+<div class="ref">Gardner, Cantor & Collins (2000) Nature 403:339-342</div>
+</div>
+<div class="grid grid-2">
+<div class="card">
+<h3><span class="dot" style="background:var(--accent)"></span>Time Series Dynamics</h3>
+<canvas id="ts-timeseries" height="280"></canvas>
+<div class="legend">
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-a)"></div>Protein A (LacI)</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-b)"></div>Protein B (TetR)</div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--blue)"></span>Phase Portrait</h3>
+<canvas id="ts-phase" height="280"></canvas>
+<div class="info-box">Nullclines shown as dashed lines. Stable states are the intersections where both derivatives are zero.</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--purple)"></span>Bifurcation Diagram</h3>
+<canvas id="ts-bifurcation" height="280"></canvas>
+<div class="info-box">Steady-state protein A vs cooperativity (n). Bistability requires n > ~2.</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--orange)"></span>Parameters</h3>
+<div class="controls">
+<div class="control-group"><label>α₁ (max expression A) <span id="ts-a1-val">3.0</span></label><input type="range" id="ts-a1" min="0.5" max="10" step="0.1" value="3.0"></div>
+<div class="control-group"><label>α₂ (max expression B) <span id="ts-a2-val">3.0</span></label><input type="range" id="ts-a2" min="0.5" max="10" step="0.1" value="3.0"></div>
+<div class="control-group"><label>n (Hill coefficient / cooperativity) <span id="ts-n-val">2.5</span></label><input type="range" id="ts-n" min="1.0" max="5.0" step="0.1" value="2.5"></div>
+<div class="control-group"><label>γ (degradation rate) <span id="ts-g-val">1.0</span></label><input type="range" id="ts-g" min="0.1" max="3.0" step="0.1" value="1.0"></div>
+<div class="control-group"><label>IPTG inducer (switches state) <span id="ts-iptg-val">0.0</span></label><input type="range" id="ts-iptg" min="0" max="5" step="0.1" value="0"></div>
+<div class="btn-group">
+<button class="btn" onclick="tsReset()">Reset</button>
+<button class="btn btn-blue" onclick="tsFlip()">Flip State (Pulse)</button>
+<button class="btn btn-outline" onclick="tsRandomIC()">Random IC</button>
+</div>
+</div>
+<div class="equations">du/dt = α₁/(1 + vⁿ) - γu + IPTG
+dv/dt = α₂/(1 + uⁿ) - γv</div>
+<div class="stat-row">
+<div class="stat"><div class="label">State</div><div class="value" id="ts-state" style="color:var(--accent)">A HIGH</div></div>
+<div class="stat"><div class="label">Protein A</div><div class="value" id="ts-pa">—</div></div>
+<div class="stat"><div class="label">Protein B</div><div class="value" id="ts-pb">—</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- MODULE 1: REPRESSILATOR -->
+<div class="module" id="mod1">
+<div class="module-header">
+<h2>Repressilator</h2>
+<p>A synthetic oscillatory network of three transcriptional repressors — the first engineered biological clock.</p>
+<div class="ref">Elowitz & Leibler (2000) Nature 403:335-338</div>
+</div>
+<div class="grid grid-2">
+<div class="card">
+<h3><span class="dot" style="background:var(--accent)"></span>Oscillation Dynamics</h3>
+<canvas id="rep-timeseries" height="280"></canvas>
+<div class="legend">
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-a)"></div>TetR (protein A)</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-b)"></div>λ CI (protein B)</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-c)"></div>LacI (protein C)</div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--blue)"></span>3D Phase Space</h3>
+<canvas id="rep-phase" height="280"></canvas>
+<div class="info-box">3D phase space projection. Click and drag to rotate. The limit cycle is the stable orbit.</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--purple)"></span>Period & Amplitude Analysis</h3>
+<canvas id="rep-analysis" height="280"></canvas>
+<div class="stat-row">
+<div class="stat"><div class="label">Period</div><div class="value" id="rep-period">—</div></div>
+<div class="stat"><div class="label">Amplitude</div><div class="value" id="rep-amp">—</div></div>
+<div class="stat"><div class="label">Oscillating?</div><div class="value" id="rep-osc" style="color:var(--accent)">—</div></div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--orange)"></span>Parameters</h3>
+<div class="controls">
+<div class="control-group"><label>α (max expression) <span id="rep-a-val">5.0</span></label><input type="range" id="rep-a" min="1" max="15" step="0.1" value="5.0"></div>
+<div class="control-group"><label>α₀ (leaky expression) <span id="rep-a0-val">0.05</span></label><input type="range" id="rep-a0" min="0" max="1" step="0.01" value="0.05"></div>
+<div class="control-group"><label>n (Hill coefficient) <span id="rep-n-val">2.5</span></label><input type="range" id="rep-n" min="1" max="5" step="0.1" value="2.5"></div>
+<div class="control-group"><label>β (mRNA decay / protein decay) <span id="rep-b-val">0.2</span></label><input type="range" id="rep-b" min="0.01" max="1" step="0.01" value="0.2"></div>
+<div class="btn-group">
+<button class="btn" onclick="repReset()">Reset</button>
+<button class="btn btn-outline" onclick="repPerturb()">Perturb</button>
+</div>
+</div>
+<div class="equations">dmᵢ/dt = -mᵢ + α/(1 + pⱼⁿ) + α₀
+dpᵢ/dt = -β(pᵢ - mᵢ)
+where i→j: A→B→C→A (cyclic repression)</div>
+</div>
+</div>
+</div>
+
+<!-- MODULE 2: CRISPR LOGIC GATES -->
+<div class="module" id="mod2">
+<div class="module-header">
+<h2>CRISPR Logic Gates</h2>
+<p>Design Boolean logic circuits using dCas9/gRNA-based transcriptional regulation. Build AND, OR, NOT, NAND, NOR, XOR gates and cascade them.</p>
+<div class="ref">Nielsen et al. (2016) Science 352:aac7341 · Gander et al. (2017) Nature Comms 8:15459</div>
+</div>
+<div class="grid grid-2">
+<div class="card" style="grid-column:span 2">
+<h3><span class="dot" style="background:var(--accent)"></span>Gate Designer</h3>
+<div class="tab-bar" id="gate-tabs">
+<button class="active" onclick="selectGate('NOT')">NOT</button>
+<button onclick="selectGate('AND')">AND</button>
+<button onclick="selectGate('OR')">OR</button>
+<button onclick="selectGate('NAND')">NAND</button>
+<button onclick="selectGate('NOR')">NOR</button>
+<button onclick="selectGate('XOR')">XOR</button>
+<button onclick="selectGate('XNOR')">XNOR</button>
+<button onclick="selectGate('IMPLIES')">IMPLIES</button>
+<button onclick="selectGate('HALF_ADDER')">Half Adder</button>
+</div>
+<div class="grid grid-3">
+<div>
+<canvas id="gate-diagram" height="260"></canvas>
+<div id="gate-bio-desc" class="info-box" style="margin-top:12px">—</div>
+</div>
+<div>
+<h3 style="font-size:.85rem">Truth Table</h3>
+<table class="truth-table" id="gate-truth-table"></table>
+</div>
+<div>
+<h3 style="font-size:.85rem">Transfer Function</h3>
+<canvas id="gate-transfer" height="200"></canvas>
+<div class="controls" style="margin-top:12px">
+<div class="control-group"><label>Input A <span id="gate-ia-val">0.0</span></label><input type="range" id="gate-ia" min="0" max="1" step="0.01" value="0"></div>
+<div class="control-group"><label>Input B <span id="gate-ib-val">0.0</span></label><input type="range" id="gate-ib" min="0" max="1" step="0.01" value="0"></div>
+<div class="stat-row">
+<div class="stat"><div class="label">Output</div><div class="value" id="gate-output">0.00</div></div>
+<div class="stat"><div class="label">Digital</div><div class="value" id="gate-digital">LOW</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- MODULE 3: GENE REGULATORY NETWORK BUILDER -->
+<div class="module" id="mod3">
+<div class="module-header">
+<h2>Gene Regulatory Network Builder</h2>
+<p>Design custom gene regulatory networks by placing genes and regulatory interactions. The system auto-generates ODEs and simulates in real-time.</p>
+</div>
+<div class="grid grid-2">
+<div class="card" style="grid-column:span 2">
+<h3><span class="dot" style="background:var(--accent)"></span>Network Canvas</h3>
+<div class="node-palette" id="grn-palette">
+<div class="node-type selected" data-type="gene" onclick="grnSelectTool('gene')">🧬 Gene</div>
+<div class="node-type" data-type="activate" onclick="grnSelectTool('activate')">➕ Activation</div>
+<div class="node-type" data-type="repress" onclick="grnSelectTool('repress')">➖ Repression</div>
+<div class="node-type" data-type="delete" onclick="grnSelectTool('delete')">🗑️ Delete</div>
+</div>
+<canvas id="grn-canvas" height="400" class="network-canvas"></canvas>
+<div class="btn-group" style="margin-top:12px">
+<button class="btn" onclick="grnSimulate()">Simulate</button>
+<button class="btn btn-outline" onclick="grnClear()">Clear All</button>
+<button class="btn btn-blue" onclick="grnPreset('toggle')">Preset: Toggle</button>
+<button class="btn btn-purple" onclick="grnPreset('repressilator')">Preset: Repressilator</button>
+<button class="btn btn-outline" onclick="grnPreset('feedforward')">Preset: Feed-Forward</button>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--blue)"></span>Generated ODEs</h3>
+<div class="equations" id="grn-equations">Click on canvas to add genes, then connect them with activation/repression edges.</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--purple)"></span>Simulation</h3>
+<canvas id="grn-sim" height="250"></canvas>
+<div class="legend" id="grn-legend"></div>
+</div>
+</div>
+</div>
+
+<!-- MODULE 4: STOCHASTIC GENE EXPRESSION -->
+<div class="module" id="mod4">
+<div class="module-header">
+<h2>Stochastic Gene Expression — Gillespie SSA</h2>
+<p>Simulate the inherent randomness in gene expression using the Gillespie Stochastic Simulation Algorithm. Observe how molecular noise propagates through genetic circuits.</p>
+<div class="ref">Gillespie (1977) J Phys Chem 81:2340 · Elowitz et al. (2002) Science 297:1183</div>
+</div>
+<div class="grid grid-2">
+<div class="card">
+<h3><span class="dot" style="background:var(--accent)"></span>Stochastic Trajectories</h3>
+<canvas id="ssa-traces" height="280"></canvas>
+<div class="legend">
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-a)"></div>mRNA</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--gene-b)"></div>Protein</div>
+<div class="legend-item"><div class="legend-color" style="background:rgba(245,158,11,0.5)"></div>Deterministic (ODE)</div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--blue)"></span>Protein Distribution (Ensemble)</h3>
+<canvas id="ssa-hist" height="280"></canvas>
+<div class="stat-row">
+<div class="stat"><div class="label">Mean</div><div class="value" id="ssa-mean">—</div></div>
+<div class="stat"><div class="label">Std Dev</div><div class="value" id="ssa-std">—</div></div>
+<div class="stat"><div class="label">Fano Factor</div><div class="value" id="ssa-fano">—</div></div>
+<div class="stat"><div class="label">CV²</div><div class="value" id="ssa-cv2">—</div></div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--purple)"></span>Noise Decomposition</h3>
+<canvas id="ssa-noise" height="280"></canvas>
+<div class="info-box">Intrinsic noise (Poisson from low copy #) vs extrinsic noise (cell-to-cell variation in parameters). Fano factor > 1 indicates super-Poissonian noise (bursting).</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--orange)"></span>Parameters</h3>
+<div class="controls">
+<div class="control-group"><label>Transcription rate (k_m) <span id="ssa-km-val">0.5</span> /s</label><input type="range" id="ssa-km" min="0.01" max="2" step="0.01" value="0.5"></div>
+<div class="control-group"><label>Translation rate (k_p) <span id="ssa-kp-val">5.0</span> /s</label><input type="range" id="ssa-kp" min="0.5" max="20" step="0.5" value="5.0"></div>
+<div class="control-group"><label>mRNA degradation (γ_m) <span id="ssa-gm-val">0.1</span> /s</label><input type="range" id="ssa-gm" min="0.01" max="1" step="0.01" value="0.1"></div>
+<div class="control-group"><label>Protein degradation (γ_p) <span id="ssa-gp-val">0.01</span> /s</label><input type="range" id="ssa-gp" min="0.001" max="0.1" step="0.001" value="0.01"></div>
+<div class="control-group"><label>Burst size (b = k_p/γ_m) <span id="ssa-burst-val">50</span></label></div>
+<div class="control-group"><label>Ensemble runs <span id="ssa-runs-val">200</span></label><input type="range" id="ssa-runs" min="50" max="500" step="50" value="200"></div>
+<div class="btn-group">
+<button class="btn" onclick="ssaRun()">Run SSA</button>
+<button class="btn btn-blue" onclick="ssaEnsemble()">Run Ensemble</button>
+<button class="btn btn-outline" onclick="ssaReset()">Reset</button>
+</div>
+</div>
+<div class="equations">Reactions:
+∅ → mRNA    (rate k_m)
+mRNA → ∅    (rate γ_m × mRNA)
+mRNA → mRNA + Protein  (rate k_p × mRNA)
+Protein → ∅  (rate γ_p × Protein)
+
+Steady state: ⟨m⟩ = k_m/γ_m, ⟨p⟩ = k_p⟨m⟩/γ_p
+Fano factor: F = 1 + k_p/γ_m = 1 + b</div>
+</div>
+</div>
+</div>
+
+<!-- MODULE 5: METABOLIC FLUX ANALYSIS -->
+<div class="module" id="mod5">
+<div class="module-header">
+<h2>Metabolic Flux Analysis</h2>
+<p>Explore stoichiometric modeling and flux balance analysis (FBA) of metabolic networks. Optimize biomass yield under nutrient constraints.</p>
+<div class="ref">Orth, Thiele & Palsson (2010) Nature Biotechnology 28:245-248</div>
+</div>
+<div class="grid grid-2">
+<div class="card">
+<h3><span class="dot" style="background:var(--accent)"></span>Metabolic Network</h3>
+<canvas id="fba-network" height="300"></canvas>
+<div class="legend">
+<div class="legend-item"><div class="legend-color" style="background:var(--accent)"></div>Metabolites</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--blue)"></div>Reactions (flux)</div>
+<div class="legend-item"><div class="legend-color" style="background:var(--orange)"></div>Optimized path</div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--blue)"></span>Flux Distribution</h3>
+<canvas id="fba-flux" height="300"></canvas>
+<div class="stat-row">
+<div class="stat"><div class="label">Objective Value</div><div class="value" id="fba-obj">—</div></div>
+<div class="stat"><div class="label">Growth Rate</div><div class="value" id="fba-growth">—</div></div>
+</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--purple)"></span>Phenotype Phase Plane</h3>
+<canvas id="fba-ppp" height="280"></canvas>
+<div class="info-box">Growth rate as a function of two nutrient uptake rates. The shadow price indicates marginal value of each nutrient.</div>
+</div>
+<div class="card">
+<h3><span class="dot" style="background:var(--orange)"></span>Controls</h3>
+<div class="controls">
+<div class="tab-bar" id="fba-model-tabs">
+<button class="active" onclick="fbaSelectModel('core')">Core Metabolism</button>
+<button onclick="fbaSelectModel('fermentation')">Fermentation</button>
+<button onclick="fbaSelectModel('amino')">Amino Acid</button>
+</div>
+<div class="control-group"><label>Glucose uptake (mmol/gDW/h) <span id="fba-glc-val">10.0</span></label><input type="range" id="fba-glc" min="0" max="20" step="0.5" value="10"></div>
+<div class="control-group"><label>O₂ uptake (mmol/gDW/h) <span id="fba-o2-val">20.0</span></label><input type="range" id="fba-o2" min="0" max="40" step="0.5" value="20"></div>
+<div class="control-group"><label>ATP maintenance (mmol/gDW/h) <span id="fba-atp-val">8.39</span></label><input type="range" id="fba-atp" min="0" max="20" step="0.01" value="8.39"></div>
+<div class="btn-group">
+<button class="btn" onclick="fbaOptimize()">Optimize FBA</button>
+<button class="btn btn-blue" onclick="fbaPPP()">Phase Plane</button>
+<button class="btn btn-outline" onclick="fbaReset()">Reset</button>
+</div>
+</div>
+<div class="equations" id="fba-stoich">S · v = 0  (steady state)
+vₘᵢₙ ≤ v ≤ vₘₐₓ  (flux bounds)
+max Z = cᵀv  (objective)</div>
+</div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+const C=(id)=>document.getElementById(id);
+const dpr=window.devicePixelRatio||1;
+
+function setupCanvas(id,w,h){
+  const c=C(id);
+  if(!c)return null;
+  const rect=c.getBoundingClientRect();
+  const cw=rect.width||w||600;
+  const ch=h||c.height||300;
+  c.width=cw*dpr;c.height=ch*dpr;
+  c.style.width=cw+'px';c.style.height=ch+'px';
+  const ctx=c.getContext('2d');
+  ctx.scale(dpr,dpr);
+  return{c,ctx,w:cw,h:ch};
+}
+
+function clearCanvas(ctx,w,h){ctx.clearRect(0,0,w,h)}
+
+function drawAxes(ctx,x0,y0,xw,yh,xlabel,ylabel){
+  ctx.strokeStyle='#2a3a50';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0,y0-yh);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+xw,y0);ctx.stroke();
+  ctx.fillStyle='#94a3b8';ctx.font='11px system-ui';ctx.textAlign='center';
+  ctx.fillText(xlabel,x0+xw/2,y0+20);
+  ctx.save();ctx.translate(x0-20,y0-yh/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText(ylabel,0,0);ctx.restore();
+}
+
+function rk4(f,y,t,dt){
+  const k1=f(t,y);
+  const k2=f(t+dt/2,y.map((v,i)=>v+dt/2*k1[i]));
+  const k3=f(t+dt/2,y.map((v,i)=>v+dt/2*k2[i]));
+  const k4=f(t+dt,y.map((v,i)=>v+dt*k3[i]));
+  return y.map((v,i)=>v+dt/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+}
+
+const COLORS=['#10b981','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#ef4444','#84cc16'];
+
+// Module switching
+function switchModule(idx){
+  document.querySelectorAll('.module').forEach((m,i)=>{m.classList.toggle('active',i===idx)});
+  document.querySelectorAll('#nav button').forEach((b,i)=>{b.classList.toggle('active',i===idx)});
+  setTimeout(()=>{
+    if(idx===0)tsInit();
+    if(idx===1)repInit();
+    if(idx===2)gateInit();
+    if(idx===3)grnInit();
+    if(idx===4)ssaInit();
+    if(idx===5)fbaInit();
+  },50);
+}
+
+// ============================================================
+// MODULE 0: GENETIC TOGGLE SWITCH
+// ============================================================
+let tsState={u:3,v:0.1,history:[],running:true,animId:null};
+
+function tsParams(){
+  const p={
+    a1:parseFloat(C('ts-a1').value),a2:parseFloat(C('ts-a2').value),
+    n:parseFloat(C('ts-n').value),g:parseFloat(C('ts-g').value),
+    iptg:parseFloat(C('ts-iptg').value)
+  };
+  C('ts-a1-val').textContent=p.a1.toFixed(1);
+  C('ts-a2-val').textContent=p.a2.toFixed(1);
+  C('ts-n-val').textContent=p.n.toFixed(1);
+  C('ts-g-val').textContent=p.g.toFixed(1);
+  C('ts-iptg-val').textContent=p.iptg.toFixed(1);
+  return p;
+}
+
+function tsODE(p){
+  return(t,y)=>{
+    const[u,v]=y;
+    const du=p.a1/(1+Math.pow(Math.max(v,0),p.n))-p.g*u+p.iptg;
+    const dv=p.a2/(1+Math.pow(Math.max(u,0),p.n))-p.g*v;
+    return[du,dv];
+  };
+}
+
+function tsStep(){
+  const p=tsParams();
+  const f=tsODE(p);
+  const dt=0.05;
+  for(let i=0;i<5;i++){
+    const y=rk4(f,[tsState.u,tsState.v],0,dt);
+    tsState.u=Math.max(0,y[0]);tsState.v=Math.max(0,y[1]);
+    tsState.history.push({u:tsState.u,v:tsState.v});
+    if(tsState.history.length>800)tsState.history.shift();
+  }
+}
+
+function tsDrawTimeSeries(){
+  const s=setupCanvas('ts-timeseries',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const hist=tsState.history;if(hist.length<2)return;
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Time','Concentration');
+  const maxVal=Math.max(5,...hist.map(h=>Math.max(h.u,h.v)))*1.1;
+  // Grid
+  ctx.strokeStyle='#1a2332';ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){
+    const yy=y0-yh*i/4;
+    ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x0+xw,yy);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font='10px system-ui';ctx.textAlign='right';
+    ctx.fillText((maxVal*i/4).toFixed(1),x0-5,yy+3);
+  }
+  // Protein A
+  ctx.strokeStyle='#10b981';ctx.lineWidth=2;ctx.beginPath();
+  hist.forEach((p,i)=>{
+    const x=x0+xw*i/(hist.length-1);
+    const y=y0-yh*p.u/maxVal;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });ctx.stroke();
+  // Protein B
+  ctx.strokeStyle='#3b82f6';ctx.lineWidth=2;ctx.beginPath();
+  hist.forEach((p,i)=>{
+    const x=x0+xw*i/(hist.length-1);
+    const y=y0-yh*p.v/maxVal;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });ctx.stroke();
+  // Stats
+  C('ts-pa').textContent=tsState.u.toFixed(2);
+  C('ts-pb').textContent=tsState.v.toFixed(2);
+  C('ts-state').textContent=tsState.u>tsState.v?'A HIGH':'B HIGH';
+  C('ts-state').style.color=tsState.u>tsState.v?'var(--accent)':'var(--blue)';
+}
+
+function tsDrawPhase(){
+  const s=setupCanvas('ts-phase',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const p=tsParams();
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  const maxVal=Math.max(5,p.a1/p.g,p.a2/p.g)*1.2;
+  drawAxes(ctx,x0,y0,xw,yh,'Protein A (u)','Protein B (v)');
+  // Nullclines
+  ctx.setLineDash([5,5]);
+  // du/dt=0: u = a1/(1+v^n)/g + iptg/g
+  ctx.strokeStyle='rgba(16,185,129,0.6)';ctx.lineWidth=1.5;ctx.beginPath();
+  for(let vi=0;vi<=maxVal;vi+=maxVal/200){
+    const ui=(p.a1/(1+Math.pow(vi,p.n))+p.iptg)/p.g;
+    const x=x0+xw*ui/maxVal;const y=y0-yh*vi/maxVal;
+    vi===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  // dv/dt=0: v = a2/(1+u^n)/g
+  ctx.strokeStyle='rgba(59,130,246,0.6)';ctx.beginPath();
+  for(let ui=0;ui<=maxVal;ui+=maxVal/200){
+    const vi=p.a2/(1+Math.pow(ui,p.n))/p.g;
+    const x=x0+xw*ui/maxVal;const y=y0-yh*vi/maxVal;
+    ui===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  ctx.setLineDash([]);
+  // Trajectory
+  const hist=tsState.history;
+  if(hist.length>2){
+    ctx.strokeStyle='rgba(245,158,11,0.7)';ctx.lineWidth=1.5;ctx.beginPath();
+    hist.forEach((pt,i)=>{
+      const x=x0+xw*pt.u/maxVal;const y=y0-yh*pt.v/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();
+    // Current point
+    const last=hist[hist.length-1];
+    ctx.fillStyle='#f59e0b';ctx.beginPath();
+    ctx.arc(x0+xw*last.u/maxVal,y0-yh*last.v/maxVal,5,0,Math.PI*2);ctx.fill();
+  }
+}
+
+function tsDrawBifurcation(){
+  const s=setupCanvas('ts-bifurcation',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const p=tsParams();
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Hill coefficient (n)','Steady-state u');
+  const nMin=1,nMax=5;
+  const maxU=p.a1/p.g*1.3;
+  // For each n, find steady states
+  ctx.fillStyle='rgba(16,185,129,0.5)';
+  for(let n=nMin;n<=nMax;n+=0.02){
+    // Find steady states by scanning
+    for(let u=0;u<=maxU;u+=maxU/300){
+      const v=p.a2/(p.g*(1+Math.pow(u,n)));
+      const u_ss=(p.a1/(1+Math.pow(v,n))+p.iptg)/p.g;
+      if(Math.abs(u-u_ss)<maxU/200){
+        const x=x0+xw*(n-nMin)/(nMax-nMin);
+        const y=y0-yh*u/maxU;
+        ctx.fillRect(x-1,y-1,2,2);
+      }
+    }
+  }
+  // Mark current n
+  ctx.strokeStyle='var(--accent)';ctx.setLineDash([3,3]);ctx.lineWidth=1;
+  const cx=x0+xw*(p.n-nMin)/(nMax-nMin);
+  ctx.beginPath();ctx.moveTo(cx,y0);ctx.lineTo(cx,y0-yh);ctx.stroke();
+  ctx.setLineDash([]);
+  // Labels
+  ctx.fillStyle='#64748b';ctx.font='10px system-ui';ctx.textAlign='center';
+  for(let n=1;n<=5;n++){
+    ctx.fillText(n.toString(),x0+xw*(n-nMin)/(nMax-nMin),y0+15);
+  }
+  ctx.textAlign='right';
+  for(let i=0;i<=4;i++){
+    ctx.fillText((maxU*i/4).toFixed(1),x0-5,y0-yh*i/4+3);
+  }
+}
+
+function tsAnimate(){
+  tsStep();tsDrawTimeSeries();tsDrawPhase();tsDrawBifurcation();
+  tsState.animId=requestAnimationFrame(tsAnimate);
+}
+
+function tsInit(){
+  if(tsState.animId)cancelAnimationFrame(tsState.animId);
+  ['ts-a1','ts-a2','ts-n','ts-g','ts-iptg'].forEach(id=>{
+    C(id).oninput=()=>tsParams();
+  });
+  tsAnimate();
+}
+
+function tsReset(){tsState.u=3;tsState.v=0.1;tsState.history=[];}
+function tsFlip(){tsState.u=tsState.v>tsState.u?3:0.1;tsState.v=tsState.u>0.5?0.1:3;}
+function tsRandomIC(){tsState.u=Math.random()*4;tsState.v=Math.random()*4;tsState.history=[];}
+
+// ============================================================
+// MODULE 1: REPRESSILATOR
+// ============================================================
+let repState={m:[1,0.5,0.2],p:[1,0.3,0.1],history:[],animId:null,rotAngle:0.5};
+
+function repParams(){
+  const pp={
+    a:parseFloat(C('rep-a').value),a0:parseFloat(C('rep-a0').value),
+    n:parseFloat(C('rep-n').value),b:parseFloat(C('rep-b').value)
+  };
+  C('rep-a-val').textContent=pp.a.toFixed(1);
+  C('rep-a0-val').textContent=pp.a0.toFixed(2);
+  C('rep-n-val').textContent=pp.n.toFixed(1);
+  C('rep-b-val').textContent=pp.b.toFixed(2);
+  return pp;
+}
+
+function repODE(pp){
+  return(t,y)=>{
+    const[m0,m1,m2,p0,p1,p2]=y;
+    const hill=(pj)=>pp.a/(1+Math.pow(Math.max(pj,0),pp.n))+pp.a0;
+    return[
+      -m0+hill(p2),-m1+hill(p0),-m2+hill(p1),
+      -pp.b*(p0-m0),-pp.b*(p1-m1),-pp.b*(p2-m2)
+    ];
+  };
+}
+
+function repStep(){
+  const pp=repParams();const f=repODE(pp);const dt=0.05;
+  for(let i=0;i<5;i++){
+    const y=[...repState.m,...repState.p];
+    const ny=rk4(f,y,0,dt);
+    repState.m=ny.slice(0,3).map(v=>Math.max(0,v));
+    repState.p=ny.slice(3,6).map(v=>Math.max(0,v));
+    repState.history.push([...repState.p]);
+    if(repState.history.length>1000)repState.history.shift();
+  }
+}
+
+function repDrawTimeSeries(){
+  const s=setupCanvas('rep-timeseries',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const hist=repState.history;if(hist.length<2)return;
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Time','Protein Level');
+  const maxVal=Math.max(3,...hist.flat())*1.1;
+  const colors=['#10b981','#3b82f6','#f59e0b'];
+  for(let g=0;g<3;g++){
+    ctx.strokeStyle=colors[g];ctx.lineWidth=2;ctx.beginPath();
+    hist.forEach((pt,i)=>{
+      const x=x0+xw*i/(hist.length-1);
+      const y=y0-yh*pt[g]/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();
+  }
+}
+
+function repDrawPhase(){
+  const s=setupCanvas('rep-phase',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const hist=repState.history;if(hist.length<10)return;
+  const cx=w/2,cy=h/2,scale=Math.min(w,h)*0.3;
+  repState.rotAngle+=0.003;
+  const angle=repState.rotAngle;
+  const cos=Math.cos(angle),sin=Math.sin(angle);
+  const maxVal=Math.max(3,...hist.flat())*1.1;
+  function project(p){
+    const x=(p[0]/maxVal-0.5)*2,y=(p[1]/maxVal-0.5)*2,z=(p[2]/maxVal-0.5)*2;
+    const rx=x*cos-z*sin,rz=x*sin+z*cos;
+    const perspective=1/(1+rz*0.3);
+    return[cx+rx*scale*perspective,cy-y*scale*perspective,rz];
+  }
+  // Axes
+  ctx.strokeStyle='#2a3a50';ctx.lineWidth=1;
+  [[maxVal,0,0],[0,maxVal,0],[0,0,maxVal]].forEach((end,i)=>{
+    const[sx,sy]=project([0,0,0]);
+    const[ex,ey]=project(end);
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.fillStyle=['#10b981','#3b82f6','#f59e0b'][i];
+    ctx.font='11px system-ui';ctx.fillText(['A','B','C'][i],ex+5,ey);
+  });
+  // Trail
+  ctx.strokeStyle='rgba(16,185,129,0.6)';ctx.lineWidth=1.5;ctx.beginPath();
+  const startIdx=Math.max(0,hist.length-500);
+  for(let i=startIdx;i<hist.length;i++){
+    const[x,y]=project(hist[i]);
+    i===startIdx?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  // Current point
+  const[lx,ly]=project(hist[hist.length-1]);
+  ctx.fillStyle='#f59e0b';ctx.beginPath();ctx.arc(lx,ly,5,0,Math.PI*2);ctx.fill();
+}
+
+function repDrawAnalysis(){
+  const s=setupCanvas('rep-analysis',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const hist=repState.history;if(hist.length<100)return;
+  // Extract protein A peaks for period estimation
+  const pA=hist.map(h=>h[0]);
+  const peaks=[];
+  for(let i=2;i<pA.length-2;i++){
+    if(pA[i]>pA[i-1]&&pA[i]>pA[i+1]&&pA[i]>pA[i-2]&&pA[i]>pA[i+2]){
+      peaks.push(i);
+    }
+  }
+  let period='N/A',amplitude='N/A',oscillating=false;
+  if(peaks.length>=2){
+    const periods=[];
+    for(let i=1;i<peaks.length;i++)periods.push(peaks[i]-peaks[i-1]);
+    const avgPeriod=periods.reduce((a,b)=>a+b,0)/periods.length*0.05*5;
+    period=avgPeriod.toFixed(2);
+    const maxP=Math.max(...pA.slice(-200));
+    const minP=Math.min(...pA.slice(-200));
+    amplitude=(maxP-minP).toFixed(2);
+    oscillating=(maxP-minP)>0.3;
+  }
+  C('rep-period').textContent=period;
+  C('rep-amp').textContent=amplitude;
+  C('rep-osc').textContent=oscillating?'YES':'NO';
+  C('rep-osc').style.color=oscillating?'var(--accent)':'var(--red)';
+  // Draw amplitude over time
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Time','Protein A Amplitude');
+  const maxVal=Math.max(3,...pA)*1.1;
+  ctx.strokeStyle='#10b981';ctx.lineWidth=2;ctx.beginPath();
+  const recent=pA.slice(-300);
+  recent.forEach((v,i)=>{
+    const x=x0+xw*i/(recent.length-1);
+    const y=y0-yh*v/maxVal;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });ctx.stroke();
+  // Peak markers
+  ctx.fillStyle='#f59e0b';
+  peaks.forEach(pi=>{
+    const adj=pi-(pA.length-recent.length);
+    if(adj>=0&&adj<recent.length){
+      const x=x0+xw*adj/(recent.length-1);
+      const y=y0-yh*pA[pi]/maxVal;
+      ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();
+    }
+  });
+}
+
+function repAnimate(){
+  repStep();repDrawTimeSeries();repDrawPhase();repDrawAnalysis();
+  repState.animId=requestAnimationFrame(repAnimate);
+}
+
+function repInit(){
+  if(repState.animId)cancelAnimationFrame(repState.animId);
+  ['rep-a','rep-a0','rep-n','rep-b'].forEach(id=>{C(id).oninput=()=>repParams();});
+  repAnimate();
+}
+function repReset(){repState.m=[1,0.5,0.2];repState.p=[1,0.3,0.1];repState.history=[];}
+function repPerturb(){repState.p[0]+=Math.random()*3;repState.p[1]+=Math.random()*2;}
+
+// ============================================================
+// MODULE 2: CRISPR LOGIC GATES
+// ============================================================
+let gateState={type:'NOT'};
+
+const GATE_DEFS={
+  NOT:{inputs:1,fn:(a)=>1-a,bio:'dCas9-gRNA binds promoter, blocking RNAP. Output is high when input is absent.',truth:[[0,1],[1,0]]},
+  AND:{inputs:2,fn:(a,b)=>a*b,bio:'Two dCas9-gRNA activators required. CRISPRa with split dCas9 reconstitution — both guides must bind adjacent sites.',truth:[[0,0,0],[0,1,0],[1,0,0],[1,1,1]]},
+  OR:{inputs:2,fn:(a,b)=>Math.max(a,b),bio:'Either CRISPRa guide activates transcription independently from tandem binding sites.',truth:[[0,0,0],[0,1,1],[1,0,1],[1,1,1]]},
+  NAND:{inputs:2,fn:(a,b)=>1-a*b,bio:'Constitutive promoter with two CRISPRi sites — both must bind to fully repress.',truth:[[0,0,1],[0,1,1],[1,0,1],[1,1,0]]},
+  NOR:{inputs:2,fn:(a,b)=>1-Math.max(a,b),bio:'Constitutive promoter repressed by either of two independent CRISPRi gRNAs.',truth:[[0,0,1],[0,1,0],[1,0,0],[1,1,0]]},
+  XOR:{inputs:2,fn:(a,b)=>Math.abs(a-b),bio:'Cascade: (A AND NOT B) OR (NOT A AND B). Requires two layers of CRISPR logic.',truth:[[0,0,0],[0,1,1],[1,0,1],[1,1,0]]},
+  XNOR:{inputs:2,fn:(a,b)=>1-Math.abs(a-b),bio:'Inverted XOR — output high when both inputs match.',truth:[[0,0,1],[0,1,0],[1,0,0],[1,1,1]]},
+  IMPLIES:{inputs:2,fn:(a,b)=>Math.max(1-a,b),bio:'A→B: NOT A OR B. If A is present without B, output is low.',truth:[[0,0,1],[0,1,1],[1,0,0],[1,1,1]]},
+  HALF_ADDER:{inputs:2,fn:(a,b)=>[Math.abs(a-b),a*b],bio:'Sum (XOR) + Carry (AND). Two-output circuit requiring 3 layers of genetic logic.',truth:[[0,0,'0,0'],[0,1,'1,0'],[1,0,'1,0'],[1,1,'0,1']],multiOut:true}
+};
+
+function selectGate(type){
+  gateState.type=type;
+  document.querySelectorAll('#gate-tabs button').forEach(b=>{
+    b.classList.toggle('active',b.textContent===type.replace('_',' '));
+  });
+  gateDrawAll();
+}
+
+function gateDrawAll(){
+  gateDrawDiagram();gateDrawTruthTable();gateDrawTransfer();
+}
+
+function gateDrawDiagram(){
+  const s=setupCanvas('gate-diagram',0,260);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const g=GATE_DEFS[gateState.type];
+  const cx=w/2,cy=h/2;
+  // Draw gate symbol
+  ctx.fillStyle='var(--surface2)';ctx.strokeStyle='var(--accent)';ctx.lineWidth=2;
+  if(gateState.type==='NOT'){
+    // Triangle + circle
+    ctx.beginPath();ctx.moveTo(cx-40,cy-30);ctx.lineTo(cx+30,cy);ctx.lineTo(cx-40,cy+30);ctx.closePath();ctx.stroke();ctx.fill();
+    ctx.beginPath();ctx.arc(cx+38,cy,8,0,Math.PI*2);ctx.stroke();
+    // Input line
+    ctx.strokeStyle='#3b82f6';ctx.beginPath();ctx.moveTo(cx-80,cy);ctx.lineTo(cx-40,cy);ctx.stroke();
+    ctx.fillStyle='#3b82f6';ctx.font='12px system-ui';ctx.textAlign='right';ctx.fillText('Input A',cx-85,cy+4);
+    // Output line
+    ctx.strokeStyle='#10b981';ctx.beginPath();ctx.moveTo(cx+46,cy);ctx.lineTo(cx+80,cy);ctx.stroke();
+    ctx.fillStyle='#10b981';ctx.textAlign='left';ctx.fillText('Output',cx+85,cy+4);
+  } else {
+    // Generic 2-input gate body
+    ctx.beginPath();
+    if(gateState.type==='AND'||gateState.type==='NAND'){
+      ctx.rect(cx-35,cy-30,50,60);ctx.stroke();ctx.fill();
+      ctx.beginPath();ctx.arc(cx+15,cy,30,Math.PI*1.5,Math.PI*0.5);ctx.stroke();
+    }else if(gateState.type==='OR'||gateState.type==='NOR'||gateState.type==='XOR'||gateState.type==='XNOR'||gateState.type==='IMPLIES'){
+      ctx.beginPath();ctx.moveTo(cx-35,cy-30);ctx.quadraticCurveTo(cx+10,cy-30,cx+40,cy);
+      ctx.quadraticCurveTo(cx+10,cy+30,cx-35,cy+30);ctx.quadraticCurveTo(cx-20,cy,cx-35,cy-30);
+      ctx.stroke();ctx.fill();
+    }else{
+      ctx.rect(cx-35,cy-35,70,70);ctx.stroke();ctx.fill();
+    }
+    // Bubble for inverted gates
+    if(['NAND','NOR','XNOR'].includes(gateState.type)){
+      ctx.strokeStyle='var(--accent)';ctx.beginPath();ctx.arc(cx+48,cy,6,0,Math.PI*2);ctx.stroke();
+    }
+    // XOR extra curve
+    if(['XOR','XNOR'].includes(gateState.type)){
+      ctx.strokeStyle='var(--accent)';ctx.beginPath();
+      ctx.quadraticCurveTo(cx-50,cy,cx-45,cy-35);ctx.stroke();
+    }
+    // Input lines
+    ctx.strokeStyle='#3b82f6';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx-80,cy-15);ctx.lineTo(cx-35,cy-15);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-80,cy+15);ctx.lineTo(cx-35,cy+15);ctx.stroke();
+    ctx.fillStyle='#3b82f6';ctx.font='12px system-ui';ctx.textAlign='right';
+    ctx.fillText('Input A',cx-85,cy-11);ctx.fillText('Input B',cx-85,cy+19);
+    // Output
+    const outX=['NAND','NOR','XNOR'].includes(gateState.type)?cx+54:cx+45;
+    ctx.strokeStyle='#10b981';ctx.beginPath();ctx.moveTo(outX,cy);ctx.lineTo(cx+80,cy);ctx.stroke();
+    ctx.fillStyle='#10b981';ctx.textAlign='left';
+    if(gateState.type==='HALF_ADDER'){
+      ctx.fillText('Sum',cx+85,cy-8);ctx.fillText('Carry',cx+85,cy+12);
+    }else{
+      ctx.fillText('Output',cx+85,cy+4);
+    }
+  }
+  // Gate label
+  ctx.fillStyle='#e2e8f0';ctx.font='bold 14px system-ui';ctx.textAlign='center';
+  ctx.fillText(gateState.type.replace('_',' '),cx,cy+60);
+  // Bio description
+  C('gate-bio-desc').textContent=g.bio;
+}
+
+function gateDrawTruthTable(){
+  const g=GATE_DEFS[gateState.type];
+  let html='<tr><th>A</th>';
+  if(g.inputs>1)html+='<th>B</th>';
+  if(g.multiOut)html+='<th>Sum</th><th>Carry</th>';
+  else html+='<th>Output</th>';
+  html+='</tr>';
+  g.truth.forEach(row=>{
+    html+='<tr>';
+    if(g.inputs===1){
+      html+=`<td class="${row[0]?'on':'off'}">${row[0]}</td>`;
+      html+=`<td class="${row[1]?'on':'off'}">${row[1]}</td>`;
+    }else{
+      html+=`<td class="${row[0]?'on':'off'}">${row[0]}</td>`;
+      html+=`<td class="${row[1]?'on':'off'}">${row[1]}</td>`;
+      if(g.multiOut){
+        const[s,c]=row[2].split(',');
+        html+=`<td class="${s==='1'?'on':'off'}">${s}</td>`;
+        html+=`<td class="${c==='1'?'on':'off'}">${c}</td>`;
+      }else{
+        html+=`<td class="${row[2]?'on':'off'}">${row[2]}</td>`;
+      }
+    }
+    html+='</tr>';
+  });
+  C('gate-truth-table').innerHTML=html;
+}
+
+function gateDrawTransfer(){
+  const s=setupCanvas('gate-transfer',0,200);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const g=GATE_DEFS[gateState.type];
+  const ia=parseFloat(C('gate-ia').value);
+  const ib=parseFloat(C('gate-ib').value);
+  C('gate-ia-val').textContent=ia.toFixed(2);
+  C('gate-ib-val').textContent=ib.toFixed(2);
+  const x0=40,y0=h-25,xw=w-60,yh=h-45;
+  drawAxes(ctx,x0,y0,xw,yh,'Input A','Output');
+  // Hill function transfer curve with fixed B
+  ctx.strokeStyle='var(--accent)';ctx.lineWidth=2;ctx.beginPath();
+  for(let a=0;a<=1;a+=0.005){
+    const K=0.3,n=3;
+    let out;
+    if(g.multiOut){out=g.fn(a,ib)[0];}
+    else{out=g.fn(a,ib);}
+    // Apply Hill-like sigmoidal shape
+    const sig=Math.pow(a,n)/(Math.pow(K,n)+Math.pow(a,n));
+    const raw=g.inputs===1?g.fn(sig):g.fn(sig,Math.pow(ib,n)/(Math.pow(K,n)+Math.pow(ib,n)));
+    const val=Array.isArray(raw)?raw[0]:raw;
+    const x=x0+xw*a;const y=y0-yh*Math.max(0,Math.min(1,val));
+    a===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  // Current point
+  const K=0.3,n=3;
+  const sigA=Math.pow(ia,n)/(Math.pow(K,n)+Math.pow(ia,n));
+  const sigB=Math.pow(ib,n)/(Math.pow(K,n)+Math.pow(ib,n));
+  const curRaw=g.inputs===1?g.fn(sigA):g.fn(sigA,sigB);
+  const curVal=Array.isArray(curRaw)?curRaw[0]:curRaw;
+  ctx.fillStyle='#f59e0b';ctx.beginPath();
+  ctx.arc(x0+xw*ia,y0-yh*Math.max(0,Math.min(1,curVal)),6,0,Math.PI*2);ctx.fill();
+  C('gate-output').textContent=curVal.toFixed(2);
+  C('gate-digital').textContent=curVal>0.5?'HIGH':'LOW';
+  C('gate-digital').style.color=curVal>0.5?'var(--accent)':'var(--red)';
+}
+
+function gateInit(){
+  ['gate-ia','gate-ib'].forEach(id=>{C(id).oninput=()=>gateDrawAll();});
+  gateDrawAll();
+}
+
+// ============================================================
+// MODULE 3: GENE REGULATORY NETWORK BUILDER
+// ============================================================
+let grnState={
+  nodes:[],edges:[],selectedTool:'gene',
+  simData:null,nextId:1,
+  dragging:null,connecting:null
+};
+
+function grnSelectTool(tool){
+  grnState.selectedTool=tool;
+  document.querySelectorAll('#grn-palette .node-type').forEach(n=>{
+    n.classList.toggle('selected',n.dataset.type===tool);
+  });
+}
+
+function grnInit(){
+  const canvas=C('grn-canvas');
+  if(!canvas)return;
+  canvas.onclick=grnCanvasClick;
+  canvas.onmousedown=grnMouseDown;
+  canvas.onmousemove=grnMouseMove;
+  canvas.onmouseup=grnMouseUp;
+  grnDraw();
+}
+
+function grnCanvasClick(e){
+  const rect=e.target.getBoundingClientRect();
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  if(grnState.selectedTool==='gene'){
+    const name=String.fromCharCode(65+grnState.nodes.length);
+    grnState.nodes.push({id:grnState.nextId++,name,x,y,color:COLORS[grnState.nodes.length%COLORS.length]});
+    grnUpdateEquations();grnDraw();
+  }else if(grnState.selectedTool==='delete'){
+    const node=grnFindNode(x,y);
+    if(node){
+      grnState.edges=grnState.edges.filter(e=>e.from!==node.id&&e.to!==node.id);
+      grnState.nodes=grnState.nodes.filter(n=>n.id!==node.id);
+      grnUpdateEquations();grnDraw();
+    }
+  }
+}
+
+function grnFindNode(x,y){
+  return grnState.nodes.find(n=>Math.hypot(n.x-x,n.y-y)<25);
+}
+
+function grnMouseDown(e){
+  const rect=e.target.getBoundingClientRect();
+  const x=e.clientX-rect.left,y=e.clientY-rect.top;
+  const node=grnFindNode(x,y);
+  if(!node)return;
+  if(grnState.selectedTool==='activate'||grnState.selectedTool==='repress'){
+    grnState.connecting={from:node.id,type:grnState.selectedTool};
+  }else if(grnState.selectedTool==='gene'){
+    grnState.dragging=node;
+  }
+}
+
+function grnMouseMove(e){
+  if(!grnState.dragging)return;
+  const rect=e.target.getBoundingClientRect();
+  grnState.dragging.x=e.clientX-rect.left;
+  grnState.dragging.y=e.clientY-rect.top;
+  grnDraw();
+}
+
+function grnMouseUp(e){
+  if(grnState.connecting){
+    const rect=e.target.getBoundingClientRect();
+    const x=e.clientX-rect.left,y=e.clientY-rect.top;
+    const target=grnFindNode(x,y);
+    if(target&&target.id!==grnState.connecting.from){
+      // Check for duplicate
+      const exists=grnState.edges.find(e=>e.from===grnState.connecting.from&&e.to===target.id);
+      if(!exists){
+        grnState.edges.push({from:grnState.connecting.from,to:target.id,type:grnState.connecting.type});
+        grnUpdateEquations();
+      }
+    }
+    grnState.connecting=null;grnDraw();
+  }
+  grnState.dragging=null;
+}
+
+function grnDraw(){
+  const s=setupCanvas('grn-canvas',0,400);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  // Draw edges
+  grnState.edges.forEach(edge=>{
+    const from=grnState.nodes.find(n=>n.id===edge.from);
+    const to=grnState.nodes.find(n=>n.id===edge.to);
+    if(!from||!to)return;
+    const dx=to.x-from.x,dy=to.y-from.y;
+    const dist=Math.hypot(dx,dy);
+    const ux=dx/dist,uy=dy/dist;
+    ctx.strokeStyle=edge.type==='activate'?'#10b981':'#ef4444';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(from.x+ux*25,from.y+uy*25);
+    ctx.lineTo(to.x-ux*28,to.y-uy*28);
+    ctx.stroke();
+    // Arrow or flat head
+    const ax=to.x-ux*28,ay=to.y-uy*28;
+    if(edge.type==='activate'){
+      ctx.beginPath();
+      ctx.moveTo(ax,ay);
+      ctx.lineTo(ax-ux*10+uy*5,ay-uy*10-ux*5);
+      ctx.lineTo(ax-ux*10-uy*5,ay-uy*10+ux*5);
+      ctx.closePath();ctx.fillStyle='#10b981';ctx.fill();
+    }else{
+      ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(ax+uy*8,ay-ux*8);
+      ctx.lineTo(ax-uy*8,ay+ux*8);
+      ctx.stroke();
+    }
+  });
+  // Draw nodes
+  grnState.nodes.forEach(node=>{
+    ctx.fillStyle=node.color;ctx.globalAlpha=0.2;
+    ctx.beginPath();ctx.arc(node.x,node.y,25,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.strokeStyle=node.color;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(node.x,node.y,25,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#e2e8f0';ctx.font='bold 14px system-ui';ctx.textAlign='center';
+    ctx.fillText(node.name,node.x,node.y+5);
+  });
+  if(grnState.nodes.length===0){
+    ctx.fillStyle='#64748b';ctx.font='14px system-ui';ctx.textAlign='center';
+    ctx.fillText('Click to add genes. Select Activation/Repression tool, then drag between genes.',w/2,h/2);
+  }
+}
+
+function grnUpdateEquations(){
+  const eqs=grnState.nodes.map(node=>{
+    const activators=grnState.edges.filter(e=>e.to===node.id&&e.type==='activate');
+    const repressors=grnState.edges.filter(e=>e.to===node.id&&e.type==='repress');
+    let expr=`d${node.name}/dt = `;
+    if(activators.length===0&&repressors.length===0){
+      expr+=`α - γ·${node.name}`;
+    }else{
+      let terms=[];
+      if(activators.length>0){
+        activators.forEach(a=>{
+          const src=grnState.nodes.find(n=>n.id===a.from);
+          terms.push(`β·${src.name}²/(K²+${src.name}²)`);
+        });
+      }
+      if(repressors.length>0){
+        repressors.forEach(r=>{
+          const src=grnState.nodes.find(n=>n.id===r.from);
+          terms.push(`α·K²/(K²+${src.name}²)`);
+        });
+      }
+      if(activators.length===0)terms.unshift('α₀');
+      expr+=terms.join(' + ')+` - γ·${node.name}`;
+    }
+    return expr;
+  }).join('\n');
+  C('grn-equations').textContent=eqs||'No genes added yet.';
+}
+
+function grnSimulate(){
+  if(grnState.nodes.length===0)return;
+  const N=grnState.nodes.length;
+  let y=new Array(N).fill(0).map(()=>Math.random()*2);
+  const data=[];const dt=0.05;const steps=2000;
+  const alpha=2,beta=5,K=1,gamma=1;
+  for(let t=0;t<steps;t++){
+    const dy=y.map((val,i)=>{
+      const node=grnState.nodes[i];
+      const acts=grnState.edges.filter(e=>e.to===node.id&&e.type==='activate');
+      const reps=grnState.edges.filter(e=>e.to===node.id&&e.type==='repress');
+      let prod=0.1; // basal
+      acts.forEach(a=>{
+        const j=grnState.nodes.findIndex(n=>n.id===a.from);
+        prod+=beta*Math.pow(y[j],2)/(Math.pow(K,2)+Math.pow(y[j],2));
+      });
+      reps.forEach(r=>{
+        const j=grnState.nodes.findIndex(n=>n.id===r.from);
+        prod+=alpha*Math.pow(K,2)/(Math.pow(K,2)+Math.pow(y[j],2));
+      });
+      if(acts.length===0&&reps.length===0)prod=alpha;
+      return prod-gamma*val;
+    });
+    y=y.map((v,i)=>Math.max(0,v+dt*dy[i]));
+    if(t%4===0)data.push([...y]);
+  }
+  grnState.simData=data;
+  grnDrawSim();
+}
+
+function grnDrawSim(){
+  const s=setupCanvas('grn-sim',0,250);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const data=grnState.simData;if(!data||data.length<2)return;
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Time','Expression');
+  const maxVal=Math.max(1,...data.flat())*1.1;
+  const N=data[0].length;
+  let legendHtml='';
+  for(let g=0;g<N;g++){
+    const color=grnState.nodes[g]?.color||COLORS[g];
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    data.forEach((pt,i)=>{
+      const x=x0+xw*i/(data.length-1);
+      const y=y0-yh*pt[g]/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();
+    legendHtml+=`<div class="legend-item"><div class="legend-color" style="background:${color}"></div>${grnState.nodes[g]?.name||('Gene '+g)}</div>`;
+  }
+  C('grn-legend').innerHTML=legendHtml;
+}
+
+function grnClear(){grnState.nodes=[];grnState.edges=[];grnState.simData=null;grnState.nextId=1;grnUpdateEquations();grnDraw();grnDrawSim();}
+
+function grnPreset(type){
+  grnClear();
+  const canvas=C('grn-canvas');
+  const w=canvas.getBoundingClientRect().width;
+  const h=400;
+  if(type==='toggle'){
+    grnState.nodes=[
+      {id:1,name:'A',x:w*0.3,y:h*0.5,color:COLORS[0]},
+      {id:2,name:'B',x:w*0.7,y:h*0.5,color:COLORS[1]}
+    ];
+    grnState.edges=[{from:1,to:2,type:'repress'},{from:2,to:1,type:'repress'}];
+    grnState.nextId=3;
+  }else if(type==='repressilator'){
+    grnState.nodes=[
+      {id:1,name:'A',x:w*0.5,y:h*0.2,color:COLORS[0]},
+      {id:2,name:'B',x:w*0.25,y:h*0.7,color:COLORS[1]},
+      {id:3,name:'C',x:w*0.75,y:h*0.7,color:COLORS[2]}
+    ];
+    grnState.edges=[{from:1,to:2,type:'repress'},{from:2,to:3,type:'repress'},{from:3,to:1,type:'repress'}];
+    grnState.nextId=4;
+  }else if(type==='feedforward'){
+    grnState.nodes=[
+      {id:1,name:'X',x:w*0.2,y:h*0.5,color:COLORS[0]},
+      {id:2,name:'Y',x:w*0.5,y:h*0.25,color:COLORS[1]},
+      {id:3,name:'Z',x:w*0.8,y:h*0.5,color:COLORS[2]}
+    ];
+    grnState.edges=[{from:1,to:2,type:'activate'},{from:2,to:3,type:'activate'},{from:1,to:3,type:'activate'}];
+    grnState.nextId=4;
+  }
+  grnUpdateEquations();grnDraw();grnSimulate();
+}
+
+// ============================================================
+// MODULE 4: STOCHASTIC GENE EXPRESSION (GILLESPIE SSA)
+// ============================================================
+let ssaState={traces:[],ensemble:[],odeTrace:null};
+
+function ssaParams(){
+  const p={
+    km:parseFloat(C('ssa-km').value),kp:parseFloat(C('ssa-kp').value),
+    gm:parseFloat(C('ssa-gm').value),gp:parseFloat(C('ssa-gp').value),
+    runs:parseInt(C('ssa-runs').value)
+  };
+  C('ssa-km-val').textContent=p.km.toFixed(2);
+  C('ssa-kp-val').textContent=p.kp.toFixed(1);
+  C('ssa-gm-val').textContent=p.gm.toFixed(2);
+  C('ssa-gp-val').textContent=p.gp.toFixed(3);
+  C('ssa-burst-val').textContent=(p.kp/p.gm).toFixed(0);
+  C('ssa-runs-val').textContent=p.runs;
+  return p;
+}
+
+function gillespie(p,tMax){
+  let t=0,m=0,protein=0;
+  const trace=[];
+  const sampleDt=tMax/500;let nextSample=0;
+  while(t<tMax){
+    const r1=p.km;           // transcription
+    const r2=p.gm*m;         // mRNA degradation
+    const r3=p.kp*m;         // translation
+    const r4=p.gp*protein;   // protein degradation
+    const rTotal=r1+r2+r3+r4;
+    if(rTotal===0)break;
+    const dt=-Math.log(Math.random())/rTotal;
+    t+=dt;
+    const rand=Math.random()*rTotal;
+    if(rand<r1){m++;}
+    else if(rand<r1+r2){m=Math.max(0,m-1);}
+    else if(rand<r1+r2+r3){protein++;}
+    else{protein=Math.max(0,protein-1);}
+    while(nextSample<=t&&nextSample<=tMax){
+      trace.push({t:nextSample,m,p:protein});
+      nextSample+=sampleDt;
+    }
+  }
+  return trace;
+}
+
+function ssaRunODE(p,tMax){
+  let m=p.km/p.gm,pr=p.kp*m/p.gp;
+  const trace=[];const dt=0.5;
+  for(let t=0;t<=tMax;t+=dt){
+    trace.push({t,m,p:pr});
+    const dm=p.km-p.gm*m;
+    const dp=p.kp*m-p.gp*pr;
+    m+=dm*dt;pr+=dp*dt;
+  }
+  return trace;
+}
+
+function ssaRun(){
+  const p=ssaParams();
+  const tMax=500;
+  ssaState.traces=[gillespie(p,tMax)];
+  ssaState.odeTrace=ssaRunODE(p,tMax);
+  ssaDrawTraces();
+}
+
+function ssaEnsemble(){
+  const p=ssaParams();
+  const tMax=500;
+  ssaState.ensemble=[];
+  ssaState.traces=[];
+  ssaState.odeTrace=ssaRunODE(p,tMax);
+  const nRuns=p.runs;
+  for(let i=0;i<nRuns;i++){
+    const tr=gillespie(p,tMax);
+    if(i<5)ssaState.traces.push(tr);
+    if(tr.length>0)ssaState.ensemble.push(tr[tr.length-1].p);
+  }
+  ssaDrawTraces();ssaDrawHist();ssaDrawNoise();
+}
+
+function ssaDrawTraces(){
+  const s=setupCanvas('ssa-traces',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  if(ssaState.traces.length===0){
+    ctx.fillStyle='#64748b';ctx.font='14px system-ui';ctx.textAlign='center';
+    ctx.fillText('Click "Run SSA" or "Run Ensemble" to simulate',w/2,h/2);
+    return;
+  }
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Time (s)','Molecule Count');
+  const allP=ssaState.traces.flatMap(tr=>tr.map(d=>d.p));
+  const allM=ssaState.traces.flatMap(tr=>tr.map(d=>d.m));
+  const maxVal=Math.max(10,...allP,...allM.map(m=>m*10))*1.1;
+  // ODE trace
+  if(ssaState.odeTrace){
+    ctx.strokeStyle='rgba(245,158,11,0.4)';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+    ctx.beginPath();
+    ssaState.odeTrace.forEach((d,i)=>{
+      const x=x0+xw*d.t/500;const y=y0-yh*d.p/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();ctx.setLineDash([]);
+  }
+  // SSA traces
+  ssaState.traces.forEach((tr,ti)=>{
+    const alpha=ssaState.traces.length>1?0.5:0.9;
+    // Protein
+    ctx.strokeStyle=`rgba(59,130,246,${alpha})`;ctx.lineWidth=1;ctx.beginPath();
+    tr.forEach((d,i)=>{
+      const x=x0+xw*d.t/500;const y=y0-yh*d.p/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();
+    // mRNA (scaled)
+    ctx.strokeStyle=`rgba(16,185,129,${alpha*0.7})`;ctx.lineWidth=1;ctx.beginPath();
+    tr.forEach((d,i)=>{
+      const x=x0+xw*d.t/500;const y=y0-yh*d.m*10/maxVal;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });ctx.stroke();
+  });
+}
+
+function ssaDrawHist(){
+  const s=setupCanvas('ssa-hist',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const data=ssaState.ensemble;
+  if(data.length===0)return;
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Protein Count','Frequency');
+  const mean=data.reduce((a,b)=>a+b,0)/data.length;
+  const variance=data.reduce((a,b)=>a+Math.pow(b-mean,2),0)/data.length;
+  const std=Math.sqrt(variance);
+  const fano=variance/mean;
+  const cv2=variance/(mean*mean);
+  C('ssa-mean').textContent=mean.toFixed(1);
+  C('ssa-std').textContent=std.toFixed(1);
+  C('ssa-fano').textContent=fano.toFixed(2);
+  C('ssa-cv2').textContent=cv2.toFixed(4);
+  // Histogram
+  const bins=30;
+  const minV=Math.min(...data),maxV=Math.max(...data);
+  const binW=(maxV-minV)/bins||1;
+  const counts=new Array(bins).fill(0);
+  data.forEach(v=>{const b=Math.min(bins-1,Math.floor((v-minV)/binW));counts[b]++;});
+  const maxCount=Math.max(...counts);
+  counts.forEach((c,i)=>{
+    const x=x0+xw*i/bins;
+    const bw=xw/bins-1;
+    const barH=yh*c/maxCount;
+    ctx.fillStyle='rgba(59,130,246,0.6)';
+    ctx.fillRect(x,y0-barH,bw,barH);
+    ctx.strokeStyle='rgba(59,130,246,0.9)';ctx.lineWidth=1;
+    ctx.strokeRect(x,y0-barH,bw,barH);
+  });
+  // Overlay Gaussian
+  ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;ctx.beginPath();
+  for(let x=minV;x<=maxV;x+=(maxV-minV)/200){
+    const pdf=Math.exp(-Math.pow(x-mean,2)/(2*variance))/(Math.sqrt(2*Math.PI*variance));
+    const normPdf=pdf*data.length*binW;
+    const px=x0+xw*(x-minV)/(maxV-minV);
+    const py=y0-yh*normPdf/maxCount;
+    x===minV?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }ctx.stroke();
+}
+
+function ssaDrawNoise(){
+  const s=setupCanvas('ssa-noise',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const p=ssaParams();
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Translation Rate (k_p)','Noise (CV²)');
+  // Theoretical noise decomposition: CV² = 1/⟨p⟩ + 1/⟨m⟩ · 1/(1+γ_m/γ_p)
+  // Intrinsic: 1/⟨p⟩  Extrinsic: burst contribution
+  const kpRange=[0.5,20];
+  const maxCV2=0.1;
+  // Total noise
+  ctx.strokeStyle='#e2e8f0';ctx.lineWidth=2;ctx.beginPath();
+  for(let kp=kpRange[0];kp<=kpRange[1];kp+=0.1){
+    const avgM=p.km/p.gm;
+    const avgP=kp*avgM/p.gp;
+    const b=kp/p.gm;
+    const cv2=1/avgP*(1+b/(1+p.gp/p.gm));
+    const x=x0+xw*(kp-kpRange[0])/(kpRange[1]-kpRange[0]);
+    const y=y0-yh*Math.min(cv2,maxCV2)/maxCV2;
+    kp===kpRange[0]?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  // Intrinsic (Poisson)
+  ctx.strokeStyle='#10b981';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);ctx.beginPath();
+  for(let kp=kpRange[0];kp<=kpRange[1];kp+=0.1){
+    const avgM=p.km/p.gm;const avgP=kp*avgM/p.gp;
+    const cv2_int=1/avgP;
+    const x=x0+xw*(kp-kpRange[0])/(kpRange[1]-kpRange[0]);
+    const y=y0-yh*Math.min(cv2_int,maxCV2)/maxCV2;
+    kp===kpRange[0]?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  // Extrinsic (burst)
+  ctx.strokeStyle='#ef4444';ctx.beginPath();
+  for(let kp=kpRange[0];kp<=kpRange[1];kp+=0.1){
+    const avgM=p.km/p.gm;const avgP=kp*avgM/p.gp;
+    const b=kp/p.gm;
+    const cv2_ext=b/(avgP*(1+p.gp/p.gm));
+    const x=x0+xw*(kp-kpRange[0])/(kpRange[1]-kpRange[0]);
+    const y=y0-yh*Math.min(cv2_ext,maxCV2)/maxCV2;
+    kp===kpRange[0]?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }ctx.stroke();
+  ctx.setLineDash([]);
+  // Current kp marker
+  const cx=x0+xw*(p.kp-kpRange[0])/(kpRange[1]-kpRange[0]);
+  ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(cx,y0);ctx.lineTo(cx,y0-yh);ctx.stroke();ctx.setLineDash([]);
+  // Legend
+  ctx.font='10px system-ui';
+  [[w-130,y0-yh+15,'Total','#e2e8f0'],[w-130,y0-yh+30,'Intrinsic','#10b981'],[w-130,y0-yh+45,'Burst (extrinsic)','#ef4444']].forEach(([x,y,label,c])=>{
+    ctx.fillStyle=c;ctx.fillRect(x,y-4,12,3);ctx.fillText(label,x+16,y);
+  });
+}
+
+function ssaInit(){
+  ['ssa-km','ssa-kp','ssa-gm','ssa-gp','ssa-runs'].forEach(id=>{C(id).oninput=()=>ssaParams();});
+  ssaParams();ssaDrawTraces();
+}
+function ssaReset(){ssaState={traces:[],ensemble:[],odeTrace:null};ssaDrawTraces();}
+
+// ============================================================
+// MODULE 5: METABOLIC FLUX ANALYSIS
+// ============================================================
+let fbaState={model:'core',result:null,pppData:null};
+
+// Simplified core E.coli metabolism model
+const FBA_MODELS={
+  core:{
+    name:'Core E.coli Metabolism',
+    metabolites:['Glucose','G6P','F6P','PYR','AcCoA','OAA','CIT','AKG','SUC','MAL','CO2','ATP','NADH','Biomass'],
+    reactions:[
+      {name:'Glc_uptake',stoich:{Glucose:-1,G6P:1},bounds:[-10,0],reversible:false},
+      {name:'Glycolysis',stoich:{G6P:-1,PYR:2,ATP:2,NADH:2},bounds:[0,100]},
+      {name:'PPP',stoich:{G6P:-1,F6P:0.67,CO2:1,NADH:2},bounds:[0,100]},
+      {name:'PDH',stoich:{PYR:-1,AcCoA:1,CO2:1,NADH:1},bounds:[0,100]},
+      {name:'CS',stoich:{AcCoA:-1,OAA:-1,CIT:1},bounds:[0,100]},
+      {name:'IDH',stoich:{CIT:-1,AKG:1,CO2:1,NADH:1},bounds:[0,100]},
+      {name:'AKGDH',stoich:{AKG:-1,SUC:1,CO2:1,NADH:1},bounds:[0,100]},
+      {name:'SDH',stoich:{SUC:-1,MAL:1,NADH:0.5},bounds:[0,100]},
+      {name:'MDH',stoich:{MAL:-1,OAA:1,NADH:1},bounds:[0,100]},
+      {name:'OxPhos',stoich:{NADH:-1,ATP:2.5},bounds:[0,100]},
+      {name:'ATPM',stoich:{ATP:-1},bounds:[8.39,100]},
+      {name:'Biomass',stoich:{G6P:-0.2,AcCoA:-0.5,AKG:-0.3,OAA:-0.2,ATP:-10,NADH:-2,Biomass:1},bounds:[0,100]},
+      {name:'CO2_ex',stoich:{CO2:-1},bounds:[0,100]},
+    ],
+    objective:'Biomass'
+  },
+  fermentation:{
+    name:'Fermentation Pathway',
+    metabolites:['Glucose','G6P','PYR','AcCoA','Ethanol','Lactate','Acetate','ATP','NADH','CO2','Biomass'],
+    reactions:[
+      {name:'Glc_uptake',stoich:{Glucose:-1,G6P:1},bounds:[-10,0]},
+      {name:'Glycolysis',stoich:{G6P:-1,PYR:2,ATP:2,NADH:2},bounds:[0,100]},
+      {name:'PDH',stoich:{PYR:-1,AcCoA:1,CO2:1,NADH:1},bounds:[0,100]},
+      {name:'LDH',stoich:{PYR:-1,NADH:-1,Lactate:1},bounds:[0,100]},
+      {name:'ADH',stoich:{AcCoA:-1,NADH:-2,Ethanol:1},bounds:[0,100]},
+      {name:'ACK',stoich:{AcCoA:-1,Acetate:1,ATP:1},bounds:[0,100]},
+      {name:'ATPM',stoich:{ATP:-1},bounds:[5,100]},
+      {name:'Biomass',stoich:{G6P:-0.2,ATP:-10,Biomass:1},bounds:[0,100]},
+      {name:'EtOH_ex',stoich:{Ethanol:-1},bounds:[0,100]},
+      {name:'Lac_ex',stoich:{Lactate:-1},bounds:[0,100]},
+      {name:'Ac_ex',stoich:{Acetate:-1},bounds:[0,100]},
+      {name:'CO2_ex',stoich:{CO2:-1},bounds:[0,100]},
+    ],
+    objective:'Biomass'
+  },
+  amino:{
+    name:'Amino Acid Biosynthesis',
+    metabolites:['Glucose','G6P','PYR','OAA','AKG','Glu','Asp','Ala','ATP','NADH','NH3','CO2','Biomass'],
+    reactions:[
+      {name:'Glc_uptake',stoich:{Glucose:-1,G6P:1},bounds:[-10,0]},
+      {name:'Glycolysis',stoich:{G6P:-1,PYR:2,ATP:2,NADH:2},bounds:[0,100]},
+      {name:'PYR_to_OAA',stoich:{PYR:-1,CO2:-1,OAA:1,ATP:-1},bounds:[0,100]},
+      {name:'TCA_partial',stoich:{OAA:-1,AKG:1,CO2:1,NADH:2},bounds:[0,100]},
+      {name:'GDH',stoich:{AKG:-1,NH3:-1,NADH:-1,Glu:1},bounds:[0,100]},
+      {name:'AspAT',stoich:{OAA:-1,Glu:-1,Asp:1,AKG:1},bounds:[0,100]},
+      {name:'AlaAT',stoich:{PYR:-1,Glu:-1,Ala:1,AKG:1},bounds:[0,100]},
+      {name:'Biomass',stoich:{Glu:-0.3,Asp:-0.2,Ala:-0.2,ATP:-15,Biomass:1},bounds:[0,100]},
+      {name:'ATPM',stoich:{ATP:-1},bounds:[5,100]},
+      {name:'NH3_uptake',stoich:{NH3:1},bounds:[0,20]},
+      {name:'CO2_ex',stoich:{CO2:-1},bounds:[0,100]},
+    ],
+    objective:'Biomass'
+  }
+};
+
+// Simple FBA solver using iterative projection (simplified LP for educational purposes)
+function solveFBA(model,glcUptake,o2Uptake,atpMaint){
+  const m=FBA_MODELS[model];
+  const nR=m.reactions.length;
+  // Initialize fluxes
+  let v=new Array(nR).fill(0);
+  // Set glucose uptake
+  v[0]=-Math.abs(glcUptake);
+  // Find objective reaction index
+  const objIdx=m.reactions.findIndex(r=>r.name===m.objective);
+  // Simple heuristic solver: propagate fluxes through stoichiometry
+  // This is a simplified educational solver, not a real LP
+  const maxIter=1000;
+  let bestObj=0,bestV=[...v];
+  for(let iter=0;iter<maxIter;iter++){
+    // Try different flux distributions
+    v=new Array(nR).fill(0);
+    v[0]=-Math.abs(glcUptake);
+    // Glycolysis
+    const glycFlux=Math.abs(v[0]);
+    v[1]=glycFlux*(0.7+Math.random()*0.3);
+    // Distribute remaining
+    for(let i=2;i<nR;i++){
+      if(i===objIdx)continue;
+      const r=m.reactions[i];
+      // Find a feasible flux based on substrate availability
+      let maxFlux=r.bounds[1];
+      v[i]=Math.random()*Math.min(glycFlux*2,maxFlux);
+      // Apply ATPM constraint
+      if(r.name==='ATPM')v[i]=Math.max(atpMaint,v[i]);
+    }
+    // Check mass balance feasibility and compute objective
+    let feasible=true;
+    const balance={};
+    m.metabolites.forEach(met=>{balance[met]=0;});
+    m.reactions.forEach((r,i)=>{
+      if(i===objIdx)return;
+      Object.entries(r.stoich).forEach(([met,coeff])=>{
+        balance[met]=(balance[met]||0)+coeff*v[i];
+      });
+    });
+    // Set objective to consume what's available
+    const objR=m.reactions[objIdx];
+    let objFlux=Infinity;
+    Object.entries(objR.stoich).forEach(([met,coeff])=>{
+      if(coeff<0){// consumed
+        const avail=balance[met]||0;
+        if(avail>0)objFlux=Math.min(objFlux,avail/(-coeff));
+        else objFlux=0;
+      }
+    });
+    if(!isFinite(objFlux))objFlux=0;
+    v[objIdx]=Math.max(0,objFlux);
+    if(v[objIdx]>bestObj){
+      bestObj=v[objIdx];
+      bestV=[...v];
+    }
+  }
+  return{fluxes:bestV,objective:bestObj,reactions:m.reactions};
+}
+
+function fbaOptimize(){
+  const p={
+    glc:parseFloat(C('fba-glc').value),
+    o2:parseFloat(C('fba-o2').value),
+    atp:parseFloat(C('fba-atp').value)
+  };
+  C('fba-glc-val').textContent=p.glc.toFixed(1);
+  C('fba-o2-val').textContent=p.o2.toFixed(1);
+  C('fba-atp-val').textContent=p.atp.toFixed(2);
+  const result=solveFBA(fbaState.model,p.glc,p.o2,p.atp);
+  fbaState.result=result;
+  C('fba-obj').textContent=result.objective.toFixed(3);
+  C('fba-growth').textContent=result.objective.toFixed(3)+' h⁻¹';
+  fbaDrawNetwork();fbaDrawFlux();
+}
+
+function fbaDrawNetwork(){
+  const s=setupCanvas('fba-network',0,300);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const m=FBA_MODELS[fbaState.model];
+  const result=fbaState.result;
+  // Position metabolites in a circle
+  const cx=w/2,cy=h/2,r=Math.min(w,h)*0.35;
+  const mets=m.metabolites.filter(met=>!['ATP','NADH','CO2','NH3'].includes(met));
+  const positions={};
+  mets.forEach((met,i)=>{
+    const angle=2*Math.PI*i/mets.length-Math.PI/2;
+    positions[met]={x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)};
+  });
+  // Draw reaction edges
+  if(result){
+    m.reactions.forEach((rxn,ri)=>{
+      const flux=result.fluxes[ri];
+      if(Math.abs(flux)<0.01)return;
+      const substrates=Object.entries(rxn.stoich).filter(([,c])=>c<0).map(([m])=>m).filter(m=>positions[m]);
+      const products=Object.entries(rxn.stoich).filter(([,c])=>c>0).map(([m])=>m).filter(m=>positions[m]);
+      substrates.forEach(sub=>{
+        products.forEach(prod=>{
+          const p1=positions[sub],p2=positions[prod];
+          if(!p1||!p2)return;
+          const isOpt=rxn.name===m.objective;
+          ctx.strokeStyle=isOpt?'rgba(245,158,11,0.8)':'rgba(59,130,246,0.3)';
+          ctx.lineWidth=Math.min(4,Math.max(1,Math.abs(flux)/3));
+          ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+        });
+      });
+    });
+  }
+  // Draw metabolite nodes
+  mets.forEach(met=>{
+    const p=positions[met];
+    ctx.fillStyle='rgba(16,185,129,0.15)';
+    ctx.beginPath();ctx.arc(p.x,p.y,20,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#10b981';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(p.x,p.y,20,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#e2e8f0';ctx.font='10px system-ui';ctx.textAlign='center';
+    ctx.fillText(met,p.x,p.y+4);
+  });
+}
+
+function fbaDrawFlux(){
+  const s=setupCanvas('fba-flux',0,300);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  if(!fbaState.result)return;
+  const result=fbaState.result;
+  const x0=80,y0=h-40,xw=w-100,yh=h-70;
+  const nR=result.reactions.length;
+  const maxFlux=Math.max(1,...result.fluxes.map(Math.abs))*1.2;
+  // Bar chart
+  const barW=xw/nR-4;
+  result.reactions.forEach((rxn,i)=>{
+    const flux=result.fluxes[i];
+    const barH=yh*Math.abs(flux)/maxFlux;
+    const x=x0+i*(barW+4);
+    const isObj=rxn.name==='Biomass';
+    ctx.fillStyle=isObj?'rgba(245,158,11,0.7)':flux>=0?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)';
+    ctx.fillRect(x,y0-barH,barW,barH);
+    ctx.strokeStyle=isObj?'#f59e0b':flux>=0?'#10b981':'#ef4444';
+    ctx.lineWidth=1;ctx.strokeRect(x,y0-barH,barW,barH);
+    // Label
+    ctx.save();ctx.translate(x+barW/2,y0+5);ctx.rotate(Math.PI/4);
+    ctx.fillStyle='#94a3b8';ctx.font='9px system-ui';ctx.textAlign='left';
+    ctx.fillText(rxn.name,0,0);ctx.restore();
+    // Value
+    ctx.fillStyle='#e2e8f0';ctx.font='9px system-ui';ctx.textAlign='center';
+    ctx.fillText(Math.abs(flux).toFixed(1),x+barW/2,y0-barH-5);
+  });
+  // Y axis
+  ctx.strokeStyle='#2a3a50';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0,y0-yh);ctx.stroke();
+  ctx.fillStyle='#64748b';ctx.font='10px system-ui';ctx.textAlign='right';
+  for(let i=0;i<=4;i++){
+    const val=maxFlux*i/4;
+    ctx.fillText(val.toFixed(1),x0-5,y0-yh*i/4+3);
+  }
+}
+
+function fbaPPP(){
+  const s=setupCanvas('fba-ppp',0,280);if(!s)return;
+  const{ctx,w,h}=s;clearCanvas(ctx,w,h);
+  const x0=50,y0=h-30,xw=w-70,yh=h-60;
+  drawAxes(ctx,x0,y0,xw,yh,'Glucose uptake (mmol/gDW/h)','Growth rate (h⁻¹)');
+  const atpM=parseFloat(C('fba-atp').value);
+  // Sweep glucose
+  const growths=[];
+  for(let glc=0;glc<=20;glc+=0.5){
+    const r=solveFBA(fbaState.model,glc,20,atpM);
+    growths.push({glc,growth:r.objective});
+  }
+  const maxGrowth=Math.max(0.1,...growths.map(g=>g.growth))*1.2;
+  // Fill area
+  ctx.fillStyle='rgba(16,185,129,0.1)';ctx.beginPath();
+  ctx.moveTo(x0,y0);
+  growths.forEach(g=>{
+    ctx.lineTo(x0+xw*g.glc/20,y0-yh*g.growth/maxGrowth);
+  });
+  ctx.lineTo(x0+xw,y0);ctx.closePath();ctx.fill();
+  // Line
+  ctx.strokeStyle='#10b981';ctx.lineWidth=2;ctx.beginPath();
+  growths.forEach((g,i)=>{
+    const x=x0+xw*g.glc/20;const y=y0-yh*g.growth/maxGrowth;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });ctx.stroke();
+  // Current point
+  const curGlc=parseFloat(C('fba-glc').value);
+  const curR=solveFBA(fbaState.model,curGlc,20,atpM);
+  ctx.fillStyle='#f59e0b';ctx.beginPath();
+  ctx.arc(x0+xw*curGlc/20,y0-yh*curR.objective/maxGrowth,6,0,Math.PI*2);ctx.fill();
+  // Axis labels
+  ctx.fillStyle='#64748b';ctx.font='10px system-ui';ctx.textAlign='center';
+  for(let i=0;i<=4;i++){ctx.fillText((20*i/4).toFixed(0),x0+xw*i/4,y0+15);}
+  ctx.textAlign='right';
+  for(let i=0;i<=4;i++){ctx.fillText((maxGrowth*i/4).toFixed(2),x0-5,y0-yh*i/4+3);}
+}
+
+function fbaSelectModel(model){
+  fbaState.model=model;
+  document.querySelectorAll('#fba-model-tabs button').forEach(b=>{
+    b.classList.toggle('active',b.textContent.toLowerCase().includes(model));
+  });
+  // Update stoich display
+  const m=FBA_MODELS[model];
+  let stoichText='S · v = 0  (steady state)\n';
+  stoichText+=`Model: ${m.name}\n`;
+  stoichText+=`Metabolites: ${m.metabolites.length}\n`;
+  stoichText+=`Reactions: ${m.reactions.length}\n`;
+  stoichText+=`Objective: maximize ${m.objective}`;
+  C('fba-stoich').textContent=stoichText;
+  fbaOptimize();
+}
+
+function fbaInit(){
+  ['fba-glc','fba-o2','fba-atp'].forEach(id=>{C(id).oninput=()=>fbaOptimize();});
+  fbaOptimize();
+}
+function fbaReset(){
+  C('fba-glc').value=10;C('fba-o2').value=20;C('fba-atp').value=8.39;
+  fbaOptimize();
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+window.addEventListener('DOMContentLoaded',()=>{
+  tsInit();
+});
+window.addEventListener('resize',()=>{
+  const active=document.querySelector('.module.active');
+  if(!active)return;
+  const idx=Array.from(document.querySelectorAll('.module')).indexOf(active);
+  if(idx===0){tsDrawTimeSeries();tsDrawPhase();tsDrawBifurcation();}
+  if(idx===2)gateDrawAll();
+  if(idx===3){grnDraw();if(grnState.simData)grnDrawSim();}
+});
+</script>
+</body>
+</html>
